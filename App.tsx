@@ -36,7 +36,13 @@ const App = () => {
   const startRecording = async () => {
     setLoading(true);
     try {
-      await Voice.start('en-Us');
+      const options = {
+        EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
+        EXTRA_PARTIAL_RESULTS: true,
+        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 60000,
+        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
+      };
+      await Voice.start('en-US', options);
     } catch (error) {
       console.log('error', error);
     }
@@ -47,9 +53,9 @@ const App = () => {
       await Voice.stop();
       setLoading(false);
     } catch (error) {
-      console.log('error', error);
+      console.error('Error stopping voice recognition: ', error);
     }
-  };
+  };  
 
   const clear = () => {
     setResult('');
