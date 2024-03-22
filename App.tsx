@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import Voice from '@react-native-community/voice';
+import Voice, { VoiceRecognitionResult } from 'react-native-voice';
 
 const App = () => {
   const [result, setResult] = useState('');
   const [isLoading, setLoading] = useState(false);
+  let recognition: VoiceRecognitionResult | null = null;
 
   const speechStartHandler = (e) => {
     console.log('speechStart successful', e);
@@ -42,20 +43,22 @@ const App = () => {
         EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 60000,
         EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
       };
-      await Voice.start('en-US', options);
+      recognition = await Voice.start('en-US', options);
     } catch (error) {
       console.log('error', error);
     }
   };
 
   const stopRecording = async () => {
-    try {
-      await Voice.stop();
-      setLoading(false);
-    } catch (error) {
-      console.error('Error stopping voice recognition: ', error);
+    if (recognition !== null) {
+      try {
+        await Voice.stop();
+        recognition = null; // Reset recognition variable
+      } catch (error) {
+        console.log('error', error);
+      }
     }
-  };  
+  };
 
   const clear = () => {
     setResult('');
