@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-native-community/voice": "^1.1.9",
+    "@react-native-voice/voice": "github:react-native-voice/voice",
     "react": "18.2.0",
     "react-native": "0.73.4",
     "react-native-voice": "^0.3.0"

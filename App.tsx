@@ -1,4 +1,4 @@
-import React, {useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,72 +8,73 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import Voice, { VoiceRecognitionResult } from 'react-native-voice';
+import Voice from 'react-native-voice';
 
 const App = () => {
-  const [result, setResult] = useState('');
-  const [isLoading, setLoading] = useState(false);
-  let recognition: VoiceRecognitionResult | null = null;
+  const [recognizedText, setRecognizedText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [globalResult, setGlobalResult] = useState('');
 
-  const speechStartHandler = (e) => {
-    console.log('speechStart successful', e);
-  };
-
-  const speechEndHandler = (e) => {
-    setLoading(false);
-    console.log('stop handler', e);
-  };
-
-  const speechResultsHandler = (e) => {
-    const text = e.value[0];
-    setResult(text);
-  };
-
-  const speechPartialResultsHandler = (e) => {
-    const text = e.value[0];
-    setResult(text);
-  };
+  useEffect(() => {
+    let intervalId: any;
+    
+    Voice.onSpeechStart = () => {
+      setIsListening(true);
+    };
+  
+    Voice.onSpeechPartialResults = (e) => {
+      const text = e.value[0];
+      console.log(text);
+      // Clear e.value[0] every 10 seconds
+      if (!intervalId) {
+        intervalId = setInterval(() => {
+          const clearedText = ''; // Clear e.value[0]
+          e.value[0] = clearedText;
+        }, 10000);
+      }
+      setRecognizedText(text);
+      
+      const count = text.split(/\s+/).filter((word) => word.trim() !== '').length;
+      setWordCount(count);
+      setGlobalResult(text);
+    };
+  
+    Voice.onSpeechEnd = () => {
+      setIsListening(false);
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+  
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+      clearInterval(intervalId);
+    };
+  }, []);
+  
+  
 
   const startRecording = async () => {
-    setLoading(true);
     try {
       const options = {
         EXTRA_LANGUAGE_MODEL: 'LANGUAGE_MODEL_FREE_FORM',
         EXTRA_PARTIAL_RESULTS: true,
-        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 60000,
+        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 120000,
         EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
       };
-      recognition = await Voice.start('en-US', options);
+      await Voice.start('en-US', options);
     } catch (error) {
       console.log('error', error);
     }
   };
 
   const stopRecording = async () => {
-    if (recognition !== null) {
-      try {
-        await Voice.stop();
-        recognition = null; // Reset recognition variable
-      } catch (error) {
-        console.log('error', error);
-      }
+    try {
+      await Voice.stop();
+    } catch (error) {
+      console.log('error', error);
     }
   };
-
-  const clear = () => {
-    setResult('');
-  };
-
-  useEffect(() => {
-    Voice.onSpeechStart = speechStartHandler;
-    Voice.onSpeechEnd = speechEndHandler;
-    Voice.onSpeechResults = speechResultsHandler;
-    Voice.onSpeechPartialResults = speechPartialResultsHandler;
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -81,31 +82,28 @@ const App = () => {
         <Text style={styles.headingText}>Voice to Text Recognition</Text>
         <View style={styles.textInputStyle}>
           <TextInput
-            value={result}
+            value={globalResult}
             multiline={true}
             placeholder="Say something!"
             style={{
               flex: 1,
               height: '100%',
             }}
-            onChangeText={(text) => setResult(text)}
+            onChangeText={(text) => setRecognizedText(text)}
           />
         </View>
+        <Text style={styles.wordCountText}>Word Count: {wordCount}</Text>
         <View style={styles.btnContainer}>
-          {isLoading ? (
-            <ActivityIndicator size="large" color="black" />
+          {isListening ? (
+            <TouchableOpacity onPress={stopRecording} style={styles.stop}>
+              <Text style={{ color: 'white', fontWeight: 'bold' }}>Stop</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={startRecording} style={styles.speak}>
               <Text style={{ color: 'white', fontWeight: 'bold' }}>Speak</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.stop} onPress={stopRecording}>
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>Stop</Text>
-          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.clear} onPress={clear}>
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>Clear</Text>
-        </TouchableOpacity>
       </SafeAreaView>
     </View>
   );
@@ -154,21 +152,23 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
-  clear: {
-    backgroundColor: 'black',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 15,
-  },
   btnContainer: {
     display: 'flex',
     flexDirection: 'row',
     width: '50%',
-    justifyContent: 'space-evenly',
+    justifyContent: 'center',
     marginTop: 24,
+  },
+  wordCountText: {
+    alignSelf: 'center',
+    marginVertical: 10,
+    fontSize: 18,
+  },
+  globalResultText: {
+    alignSelf: 'center',
+    marginVertical: 10,
+    fontSize: 18,
+    fontStyle: 'italic',
   },
 });
 
